@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_timer/beans/lap.dart';
 import 'package:intl/intl.dart';
 
 class MyStopWatch extends StatefulWidget {
@@ -32,6 +33,8 @@ class _MyStopWatchState extends State<MyStopWatch> {
   bool _startedTimer = false;
   bool _isPaused = false;
 
+  LapManager _lapManager = LapManager();
+
   final NumberFormat _formatter = new NumberFormat("00");
   final NumberFormat _formatterM = new NumberFormat("000");
   final NumberFormat _formatterF = new NumberFormat("0");
@@ -39,19 +42,28 @@ class _MyStopWatchState extends State<MyStopWatch> {
 
 
 
-  void _incrementTimeEveryMilliSecond(){
-    _time += 100;
 
-    int anyFractionOfASecond = (_time/100).floor() % 10;
-    int newSeconds = (_time/1000).floor() % 60;
-    int newMinutes = (_time/1000/60).floor() % 60;
-    int newHours = (_time / 1000 / 60 / 60).floor();
+  String formatTime(int time, NumberFormat formatterF, {bool millies = false}){
+    int anyFractionOfASecond = millies ? time%1000 : (time/100).floor() % 10;
+    int newSeconds = (time/1000).floor() % 60;
+    int newMinutes = (time/1000/60).floor() % 60;
+    int newHours = (time / 1000 / 60 / 60).floor();
 
     String formattedText = _formatter.format(newHours) + 
         ":" + _formatter.format(newMinutes) + 
         ":" + _formatter.format(newSeconds) + 
-        '.' + _formatterF.format(anyFractionOfASecond);
+        '.' + formatterF.format(anyFractionOfASecond);
 
+    return formattedText;
+  }
+
+
+
+
+  void _incrementTimeEveryMilliSecond(){
+    _time += 100;
+
+    String formattedText = formatTime(_time, _formatterF);
 
     setState((){
       _timeFormatted = formattedText;
@@ -77,6 +89,7 @@ class _MyStopWatchState extends State<MyStopWatch> {
 
 
   void _onReset(){
+    _lapManager.clearLaps();
     setState((){
       _time = 0;
       _timeFormatted = "00:00:00.0";
@@ -113,7 +126,12 @@ class _MyStopWatchState extends State<MyStopWatch> {
 
 
   void _onRound(){
-    print('onRound: TODO');
+    int timeNow = DateTime.now().millisecondsSinceEpoch;
+    int timePassed = timeNow - _timeStart;
+
+    Lap lap = Lap.from(timePassed);
+    _lapManager.addLap(lap);
+
   }
 
 
@@ -135,13 +153,39 @@ class _MyStopWatchState extends State<MyStopWatch> {
 
 
 
+  List<Widget> getLaps(){
+    List<Widget> laps = [];
 
+    // header
+    laps.add(Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: <Widget>[
+        Text('No.'), 
+        Text('Lap'),
+        Text('Total'),
+      ],
+    ));
+
+    // laps
+    for(int i = 0; i < _lapManager.laps.length; i++){
+      laps.add(Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+
+        children: <Widget>[
+          Text((i+1).toString()), 
+          Text(formatTime(_lapManager.laps[i].lapTime, _formatterM, millies:true)),
+          Text(formatTime(_lapManager.laps[i].totalTime, _formatterM, millies:true)),
+        ],
+      ));
+    }
+
+    return laps;
+  }
 
 
 
   @override
   Widget build(BuildContext context) {
-    print('started? ' + _startedTimer.toString());
 
     return Scaffold(
       appBar: AppBar(
@@ -195,6 +239,14 @@ class _MyStopWatchState extends State<MyStopWatch> {
 
             // space between text and button
             SizedBox(height: 50), 
+
+
+            if(_lapManager.laps.length > 0)...[
+              Column(
+                children: getLaps(),
+              ),
+              SizedBox(height: 50),
+            ],
 
 
 
