@@ -30,15 +30,17 @@ class _MyStopWatchState extends State<MyStopWatch> {
 
   Timer? _timer;
   bool _startedTimer = false;
+  bool _isPaused = false;
 
   final NumberFormat _formatter = new NumberFormat("00");
   final NumberFormat _formatterM = new NumberFormat("000");
   final NumberFormat _formatterF = new NumberFormat("0");
 
 
+
+
   void _incrementTimeEveryMilliSecond(){
     _time += 100;
-    print('time: ' + _time.toString());
 
     int anyFractionOfASecond = (_time/100).floor() % 10;
     int newSeconds = (_time/1000).floor() % 60;
@@ -50,32 +52,49 @@ class _MyStopWatchState extends State<MyStopWatch> {
         ":" + _formatter.format(newSeconds) + 
         '.' + _formatterF.format(anyFractionOfASecond);
 
-    print('updating.. ' + formattedText);
-
-
 
     setState((){
       _timeFormatted = formattedText;
     });
   }
 
+
+
+
   void _onStart(){
-    _timeStart = DateTime.now().millisecondsSinceEpoch;
+    if(!_startedTimer && !_isPaused){
+      _timeStart = DateTime.now().millisecondsSinceEpoch;
+      _time = 0;
+    }
+
     _timer = Timer.periodic(Duration(milliseconds: 100), (Timer t) => _incrementTimeEveryMilliSecond());
-    // _timer = Timer.periodic(Duration(microseconds: _microFactor ~/ _factor), (Timer t) => _incrementTimeEveryMilliSecond());
 
     setState((){
       _startedTimer = true;
+      _isPaused = false;
     });
   }
 
 
-  void _onStop(){
+  void _onReset(){
+    setState((){
+      _time = 0;
+      _timeFormatted = "00:00:00.0";
+      _isPaused = false;
+      _startedTimer = false;
+    });
+  }
+
+
+
+
+  void _onStop(bool isPaused){
     _timer?.cancel();
-    _time = 0;
-    
+
     int timeNow = DateTime.now().millisecondsSinceEpoch;
     int timePassed = timeNow - _timeStart;
+    _time = timePassed;
+
     print('passed: '+ timePassed.toString());
 
     int hours = timePassed/1000/60~/60;
@@ -85,18 +104,26 @@ class _MyStopWatchState extends State<MyStopWatch> {
 
 
     setState((){
-      // _timeFormatted = "00:00:00.00";
       _timeFormatted = _formatter.format(hours) + ":" + _formatter.format(minutes) + ":" + _formatter.format(seconds) + '.' + _formatterM.format(millies);
       _startedTimer = false;
+      _isPaused = isPaused;
     });
   }
+
+
+
+  void _onRound(){
+    print('onRound: TODO');
+  }
+
+
+
 
 
 
   @override
   void initState() {
     super.initState();
-    // timer = Timer.periodic(Duration(seconds: 1), (Timer t) => _incrementTimeEverySecond());
   }
 
 
@@ -109,8 +136,12 @@ class _MyStopWatchState extends State<MyStopWatch> {
 
 
 
+
+
+
   @override
   Widget build(BuildContext context) {
+    print('started? ' + _startedTimer.toString());
 
     return Scaffold(
       appBar: AppBar(
@@ -130,25 +161,153 @@ class _MyStopWatchState extends State<MyStopWatch> {
 
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
-              '$_timeFormatted',
-              style: Theme.of(context).textTheme.headline4,
+
+            
+
+            // Displayed Time
+            Row(
+              children: <Widget>[
+                Text(
+                  '$_timeFormatted'.split('.')[0],
+                  // style: Theme.of(context).textTheme.headline4,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 40,
+                    fontWeight: FontWeight.w400,
+
+                  ),
+                ),
+                Text(
+                  '.'+'$_timeFormatted'.split('.')[1],
+                  // style: Theme.of(context).textTheme.headline4,
+                  style: TextStyle(
+                    color: Colors.black.withOpacity(0.3),
+                    fontSize: 40,
+                    fontWeight: FontWeight.w300,
+
+                  ),
+                ),
+              ],
+              mainAxisAlignment: MainAxisAlignment.center,
             ),
-            OutlinedButton(
-              onPressed: _startedTimer ? _onStop : _onStart,
-              child: Text(_startedTimer ? 'Stop' : 'Start')
+
+
+
+            // space between text and button
+            SizedBox(height: 50), 
+
+
+
+
+
+            // Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+
+                // button: Start/Stop/continue
+                Material(
+                  // color: _startedTimer ? Theme.of(context).colorScheme.secondary.withOpacity(0.6) : Theme.of(context).accentColor.withOpacity(0.6),
+                  // color: _startedTimer ? Theme.of(context).colorScheme.secondary.withOpacity(0.6) : Theme.of(context).colorScheme.primary.withOpacity(0.9),
+                  color: _startedTimer ? Theme.of(context).colorScheme.primary.withOpacity(0.6) : Theme.of(context).colorScheme.secondary.withOpacity(0.6),
+
+                  borderRadius: BorderRadius.circular(18.0),
+
+                  child: InkWell(
+                    onTapDown: (TapDownDetails details){_startedTimer ? _onStop(true) : _onStart();},
+                    onTap: (){},
+                    child: Container(
+                      child: Center(
+                        child: Text(
+                          _startedTimer ? 'Stop' : _isPaused ? 'Continue' : 'Start',
+                          style: TextStyle(
+                            color: Colors.black
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+
+                      height: 50,
+                      width: 100,
+                    
+                    ),
+
+
+
+                    splashColor: Theme.of(context).colorScheme.secondaryVariant,
+                    highlightColor: Theme.of(context).colorScheme.primaryVariant,
+                    overlayColor: MaterialStateProperty.all(Colors.white),
+
+                    borderRadius: BorderRadius.circular(18.0),
+
+
+                  ),
+
+                ),
+
+
+                // button: reset/round
+                if(_time > 0) ...[
+
+                  SizedBox(width: 30),
+
+                  // Button
+                  Material(
+                    color: _isPaused ? Colors.blue.withOpacity(0.6) : Colors.greenAccent.withOpacity(0.6),
+                    // color: Theme.of(context).colorScheme.secondary.withOpacity(0.6),
+
+                    borderRadius: BorderRadius.circular(18.0),
+
+                    child: InkWell(
+                      onTapDown: (TapDownDetails details){_isPaused ? _onReset() : _onRound();},
+                      onTap: (){},
+                      child: Container(
+                        child: Center(
+                          child: Text(
+                            _isPaused ? 'Reset' : 'Round',
+                            style: TextStyle(
+                              color: Colors.black
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+
+                        height: 50,
+                        width: 100,
+                      
+                      ),
+
+                      splashColor: Theme.of(context).colorScheme.secondaryVariant,
+                      highlightColor: Theme.of(context).colorScheme.primaryVariant,
+                      overlayColor: MaterialStateProperty.all(Colors.white),
+
+                      borderRadius: BorderRadius.circular(18.0),
+
+
+                    ),
+
+                  ),
+
+                ],
+
+
+
+
+              ],
             ),
+
+
+
+
+
+
           ],
         ),
       ),
       
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementTimeEveryMilliSecond,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
 
-      
+
+
     );
   }
 }

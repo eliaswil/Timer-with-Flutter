@@ -14,6 +14,8 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.pink,
+        accentColor: Colors.amber,
+        
       ),
 
       home: MyStopWatch(title: 'Timer'),
